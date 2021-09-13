@@ -1,6 +1,7 @@
 package event
 
 type ApplicationCreated struct {
-	ID   string
-	Name string
+	ID      string
+	Name    string
+	Version string
 }

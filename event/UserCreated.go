@@ -1,7 +1,8 @@
 package event
 
-type UserCreatedData struct {
-	ID       string
-	Username string
-	Email    string
+type UserCreated struct {
+	ID         string
+	Username   string
+	Email      string
+	IsSysAdmin bool
 }

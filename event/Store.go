@@ -4,7 +4,7 @@ type Data struct {
 	ID                 string
 	ReferenceID        string
 	Type               string
-	UserCreated        *UserCreatedData
+	UserCreated        *UserCreated
 	ApplicationCreated *ApplicationCreated
 }
 
