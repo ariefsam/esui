@@ -36,14 +36,10 @@ type eventstoreDB interface {
 }
 
 func NewEsui(
-	entityRepository repository[Entity],
-	projectionRepository repository[Projection],
 	eventstore eventstoreDB,
 ) (obj *Esui) {
 	obj = &Esui{
-		entityRepository:     entityRepository,
-		projectionRepository: projectionRepository,
-		eventstore:           eventstore,
+		eventstore: eventstore,
 	}
 	return obj
 }

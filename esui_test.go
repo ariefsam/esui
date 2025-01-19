@@ -4,30 +4,22 @@ import (
 	"testing"
 
 	"github.com/ariefsam/esui"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-type mockRepository[T esui.EsuiEntity] struct {
-	createCalled T
-	updateCalled bool
+type mockEventstore struct {
+	mock.Mock
 }
-
-func (m *mockRepository[T]) Create(id string, object T) (err error) {
-	m.createCalled = object
-	return
-}
-
-type mockEventstore struct{}
 
 func (m *mockEventstore) StoreEvent(aggregateID string, aggregateName string, eventName string, data interface{}) (err error) {
+	m.Called(aggregateID, aggregateName, eventName, data)
 	return
 }
 
 func TestNewEsui(t *testing.T) {
-	repoEntity := &mockRepository[esui.Entity]{}
-	repoProjection := &mockRepository[esui.Projection]{}
 	estore := &mockEventstore{}
-	esObj := esui.NewEsui(repoEntity, repoProjection, estore)
+	esObj := esui.NewEsui(estore)
 	require.NotNil(t, esObj)
 
 	entityID, err := esObj.CreateEntity("user")
@@ -47,6 +39,5 @@ func TestNewEsui(t *testing.T) {
 		"name": "string",
 	})
 	require.NoError(t, err)
-
 
 }
