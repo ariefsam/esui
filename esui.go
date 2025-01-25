@@ -3,6 +3,8 @@ package esui
 import (
 	"encoding/json"
 	"errors"
+
+	"github.com/ariefsam/esui/logger"
 )
 
 type Esui struct {
@@ -27,16 +29,26 @@ func (atype attributeType) Validate() error {
 type ShortID string
 
 type EsuiEntity struct {
-	Name string `json:"name"`
+	Name   string                     `json:"name"`
+	Events map[string]EsuiEntityEvent `json:"events"`
+}
+
+type EsuiEntityEvent struct {
+	Attributes map[attributeName]attributeType `json:"attribute"`
 }
 
 type EsuiEntityCreated struct {
 	Name string `json:"name"`
 }
 
+type EsuiEventAdded struct {
+	Name string `json:"name"`
+}
+
 type EsuiAttributeAdded struct {
-	Name attributeName `json:"name"`
-	Type attributeType `json:"type"`
+	EventID ShortID       `json:"event_id"`
+	Name    attributeName `json:"name"`
+	Type    attributeType `json:"type"`
 }
 
 type EsuiProjection struct {
@@ -95,8 +107,43 @@ func (es *Esui) GetEntity(entityID ShortID) (entity EsuiEntity, err error) {
 				return
 			}
 			entity.Name = entityCreated.Name
-			continue
+		case "event_created":
+			var eventAdded EsuiEventAdded
+			err = json.Unmarshal([]byte(event.Data), &eventAdded)
+			if err != nil {
+				return
+			}
+			if entity.Events == nil {
+				entity.Events = make(map[string]EsuiEntityEvent)
+			}
+			entity.Events[eventAdded.Name] = EsuiEntityEvent{}
 		}
 	}
+
+	return
+}
+
+func (es *Esui) AddEventToEntity(entityID ShortID, eventName string) (err error) {
+	entity, err := es.GetEntity(entityID)
+	if err != nil {
+		logger.Println(err)
+		return
+	}
+
+	if entity.Name == "" {
+		err = errors.New("entity not found")
+		return
+	}
+
+	if _, ok := entity.Events[eventName]; ok {
+		err = errors.New("event already exist")
+		return
+	}
+
+	dataEvent := EsuiEventAdded{
+		Name: eventName,
+	}
+	err = es.eventstore.StoreEvent(string(entityID), "entity", "event_created", dataEvent)
+
 	return
 }
