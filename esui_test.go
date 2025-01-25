@@ -20,7 +20,9 @@ func (m *mockEventstore) StoreEvent(aggregateID string, aggregateName string, ev
 
 func (m *mockEventstore) FetchAggregateEvents(aggregateID string, aggregateName string, fromID string) (events []esui.EsuiEvent, err error) {
 	args := m.Called(aggregateID, aggregateName, fromID)
-	return args.Get(0).([]esui.EsuiEvent), args.Error(1)
+	events, _ = args.Get(0).([]esui.EsuiEvent)
+	err = args.Error(1)
+	return
 }
 
 type mockIDGenerator struct {
@@ -79,17 +81,27 @@ func TestGetEntity(t *testing.T) {
 	esObj := esui.NewEsui(estore, idgenerator)
 	require.NotNil(t, esObj)
 
-	estore.On("FetchAggregateEvents", "abc123", "entity", "").Return(
-		[]esui.EsuiEvent{
-			{
-				EventID:       "abc123",
-				AggregateID:   "abc123",
-				AggregateName: "entity",
-				EventName:     "created",
-				Data:          `{"name":"user"}`,
-			},
-		}, nil)
-	esuiEntity, err := esObj.GetEntity("abc123")
-	require.NoError(t, err)
-	require.Equal(t, "user", esuiEntity.Name)
+	t.Run("Get Entity Success", func(t *testing.T) {
+
+		estore.On("FetchAggregateEvents", "abc123", "entity", "").Return(
+			[]esui.EsuiEvent{
+				{
+					EventID:       "abc123",
+					AggregateID:   "abc123",
+					AggregateName: "entity",
+					EventName:     "created",
+					Data:          `{"name":"user"}`,
+				},
+			}, nil).Once()
+		esuiEntity, err := esObj.GetEntity("abc123")
+		require.NoError(t, err)
+		require.Equal(t, "user", esuiEntity.Name)
+	})
+
+	t.Run("Get Entity Failed FetchAggregateEvents", func(t *testing.T) {
+		estore.On("FetchAggregateEvents", "bc123", "entity", "").Return(esui.EsuiEntity{}, errors.New("Error fetch aggregate events")).Once()
+		esuiEntity, err := esObj.GetEntity("bc123")
+		require.Error(t, err)
+		require.Empty(t, esuiEntity)
+	})
 }

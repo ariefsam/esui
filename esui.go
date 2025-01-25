@@ -2,7 +2,7 @@ package esui
 
 import (
 	"encoding/json"
-	"log"
+	"errors"
 )
 
 type Esui struct {
@@ -16,6 +16,14 @@ type idgenerator interface {
 
 type attributeName string
 type attributeType string
+
+func (atype attributeType) Validate() error {
+	if atype != "string" && atype != "int" {
+		return errors.New("Invalid attribute type")
+	}
+	return nil
+}
+
 type ShortID string
 
 type EsuiEntity struct {
@@ -24,6 +32,11 @@ type EsuiEntity struct {
 
 type EsuiEntityCreated struct {
 	Name string `json:"name"`
+}
+
+type EsuiAttributeAdded struct {
+	Name attributeName `json:"name"`
+	Type attributeType `json:"type"`
 }
 
 type EsuiProjection struct {
@@ -60,7 +73,7 @@ func (es *Esui) CreateEntity(entityName string) (entityID ShortID, err error) {
 	}
 	entityID = ShortID(es.idgenerator.Generate())
 	err = es.eventstore.StoreEvent(string(entityID), "entity", "created", entityObj)
-	log.Println("err", err)
+
 	if err != nil {
 		return "", err
 	}
