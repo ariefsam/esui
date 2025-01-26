@@ -248,37 +248,37 @@ func TestAddAttribute(t *testing.T) {
 	})
 
 	t.Run("Get entity will show attribute", func(t *testing.T) {
-		estore.On("FetchAggregateEvents", "prod123", "entity", "").Return([]esui.EsuiEvent{
+		estore.On("FetchAggregateEvents", "prod1234", "entity", "").Return([]esui.EsuiEvent{
 			{
 				EventID:       "abc123",
-				AggregateID:   "prod123",
+				AggregateID:   "prod1234",
 				AggregateName: "entity",
 				EventName:     "created",
 				Data:          `{"name":"product"}`,
 			},
 			{
 				EventID:       "abc124",
-				AggregateID:   "prod123",
+				AggregateID:   "prod1234",
 				AggregateName: "entity",
 				EventName:     "event_added",
 				Data:          `{"name":"product_created"}`,
 			},
 			{
 				EventID:       "abc125",
-				AggregateID:   "prod123",
+				AggregateID:   "prod1234",
 				AggregateName: "entity",
 				EventName:     "attribute_added",
 				Data:          `{"event_name":"product_created","name":"name","type":"string"}`,
 			},
 			{
 				EventID:       "abc126",
-				AggregateID:   "prod123",
+				AggregateID:   "prod1234",
 				AggregateName: "entity",
 				EventName:     "attribute_added",
 				Data:          `{"event_name":"product_created","name":"price","type":"float"}`,
 			},
 		}, nil).Once()
-		esuiEntity, err := esObj.GetEntity("prod123")
+		esuiEntity, err := esObj.GetEntity("prod1234")
 		require.NoError(t, err)
 		require.Equal(t, "product", esuiEntity.Name)
 		require.Equal(t, esui.AttributeType("string"), esuiEntity.Events["product_created"].Attributes["name"])
