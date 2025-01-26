@@ -1,6 +1,7 @@
 package esui_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -13,7 +14,7 @@ type mockEventstore struct {
 	mock.Mock
 }
 
-func (m *mockEventstore) StoreEvent(aggregateID string, aggregateName string, eventName string, data interface{}) (err error) {
+func (m *mockEventstore) StoreEvent(ctx context.Context, aggregateID string, aggregateName string, eventName string, data interface{}) (err error) {
 	args := m.Called(aggregateID, aggregateName, eventName, data)
 	if len(args) == 0 {
 		return nil
@@ -21,7 +22,7 @@ func (m *mockEventstore) StoreEvent(aggregateID string, aggregateName string, ev
 	return args.Error(0)
 }
 
-func (m *mockEventstore) FetchAggregateEvents(aggregateID string, aggregateName string, fromID string) (events []esui.EsuiEvent, err error) {
+func (m *mockEventstore) FetchAggregateEvents(ctx context.Context, aggregateID string, aggregateName string, fromID string) (events []esui.EsuiEvent, err error) {
 	args := m.Called(aggregateID, aggregateName, fromID)
 	if len(args) == 0 {
 		return []esui.EsuiEvent{}, nil
@@ -41,6 +42,7 @@ func (m *mockIDGenerator) Generate() string {
 }
 
 func TestNewEntity(t *testing.T) {
+	ctx := context.TODO()
 	estore := &mockEventstore{}
 	idgenerator := &mockIDGenerator{}
 	esObj := esui.NewEsui(estore, idgenerator)
@@ -53,7 +55,7 @@ func TestNewEntity(t *testing.T) {
 		}
 		estore.On("StoreEvent", "abc123", "entity", "created", expectedEntityObj).Return(nil)
 
-		entityID, err := esObj.CreateEntity("user")
+		entityID, err := esObj.CreateEntity(ctx, "user")
 		require.NoError(t, err)
 		require.NotEmpty(t, entityID)
 
@@ -75,13 +77,14 @@ func TestNewEntity(t *testing.T) {
 		}
 		estore.On("StoreEvent", "abc123", "entity", "created", expectedEntityObj).Return(errors.New("Error store event"))
 
-		entityID, err := esObj.CreateEntity("userx")
+		entityID, err := esObj.CreateEntity(ctx, "userx")
 		require.Error(t, err)
 		require.Empty(t, entityID)
 	})
 }
 
 func TestGetEntity(t *testing.T) {
+	ctx := context.TODO()
 	estore := &mockEventstore{}
 	idgenerator := &mockIDGenerator{}
 	esObj := esui.NewEsui(estore, idgenerator)
@@ -99,20 +102,21 @@ func TestGetEntity(t *testing.T) {
 					Data:          `{"name":"user"}`,
 				},
 			}, nil).Once()
-		esuiEntity, err := esObj.GetEntity("abc123")
+		esuiEntity, err := esObj.GetEntity(ctx, "abc123")
 		require.NoError(t, err)
 		require.Equal(t, "user", esuiEntity.Name)
 	})
 
 	t.Run("Get Entity Failed FetchAggregateEvents", func(t *testing.T) {
 		estore.On("FetchAggregateEvents", "bc123", "entity", "").Return(esui.EsuiEntity{}, errors.New("Error fetch aggregate events")).Once()
-		esuiEntity, err := esObj.GetEntity("bc123")
+		esuiEntity, err := esObj.GetEntity(ctx, "bc123")
 		require.Error(t, err)
 		require.Empty(t, esuiEntity)
 	})
 }
 
 func TestAddEventToEntity(t *testing.T) {
+	ctx := context.TODO()
 	estore := &mockEventstore{}
 	idgenerator := &mockIDGenerator{}
 	esObj := esui.NewEsui(estore, idgenerator)
@@ -120,7 +124,7 @@ func TestAddEventToEntity(t *testing.T) {
 
 	t.Run("Cannot Add Event if Entity Not Found", func(t *testing.T) {
 		estore.On("FetchAggregateEvents", "notfoundIDxxx", "entity", "").Return([]esui.EsuiEvent{}, nil).Once()
-		err := esObj.AddEventToEntity("notfoundIDxxx", "event_added")
+		err := esObj.AddEventToEntity(ctx, "notfoundIDxxx", "event_added")
 		require.Error(t, err)
 	})
 
@@ -141,7 +145,7 @@ func TestAddEventToEntity(t *testing.T) {
 		estore.On("StoreEvent", "abc123", "entity", "event_added", esui.EsuiEventAdded{
 			Name: "user_created",
 		}).Return(nil).Once()
-		err := esObj.AddEventToEntity("abc123", "user_created")
+		err := esObj.AddEventToEntity(ctx, "abc123", "user_created")
 		require.NoError(t, err)
 
 		estore.AssertCalled(t, "StoreEvent", "abc123", "entity", "event_added", mock.MatchedBy(func(data interface{}) bool {
@@ -171,7 +175,7 @@ func TestAddEventToEntity(t *testing.T) {
 					Data:          `{"name":"product_created"}`,
 				},
 			}, nil).Once()
-		esuiEntity, err := esObj.GetEntity("abc123")
+		esuiEntity, err := esObj.GetEntity(ctx, "abc123")
 		require.NoError(t, err)
 		require.Equal(t, "user", esuiEntity.Name)
 		require.Equal(t, esui.EsuiEntityEvent{}, esuiEntity.Events["product_created"])
@@ -195,13 +199,14 @@ func TestAddEventToEntity(t *testing.T) {
 			},
 		}, nil).Once()
 
-		err := esObj.AddEventToEntity("prod123", "product_created")
+		err := esObj.AddEventToEntity(ctx, "prod123", "product_created")
 		require.Error(t, err)
 	})
 
 }
 
 func TestAddAttribute(t *testing.T) {
+	ctx := context.TODO()
 	estore := &mockEventstore{}
 	idgenerator := &mockIDGenerator{}
 	esObj := esui.NewEsui(estore, idgenerator)
@@ -235,7 +240,7 @@ func TestAddAttribute(t *testing.T) {
 			Type:      "string",
 		}).Return(nil).Once()
 
-		err := esObj.AddAttribute("prod123", "product_created", "name", "string")
+		err := esObj.AddAttribute(ctx, "prod123", "product_created", "name", "string")
 		require.NoError(t, err)
 
 		estore.AssertCalled(t, "StoreEvent", "prod123", "entity", "attribute_added", mock.MatchedBy(func(data interface{}) bool {
@@ -278,7 +283,7 @@ func TestAddAttribute(t *testing.T) {
 				Data:          `{"event_name":"product_created","name":"price","type":"float"}`,
 			},
 		}, nil).Once()
-		esuiEntity, err := esObj.GetEntity("prod1234")
+		esuiEntity, err := esObj.GetEntity(ctx, "prod1234")
 		require.NoError(t, err)
 		require.Equal(t, "product", esuiEntity.Name)
 		require.Equal(t, esui.AttributeType("string"), esuiEntity.Events["product_created"].Attributes["name"])

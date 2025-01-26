@@ -1,9 +1,9 @@
 package esui
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"log"
 
 	"github.com/ariefsam/esui/logger"
 )
@@ -54,8 +54,9 @@ type EsuiAttributeAdded struct {
 }
 
 type EsuiProjection struct {
-	ID   ShortID `json:"projection_id"`
-	Name string  `json:"name"`
+	ID       ShortID `json:"projection_id"`
+	Name     string  `json:"name"`
+	IsActive bool    `json:"is_active"`
 }
 
 type EsuiEvent struct {
@@ -67,8 +68,8 @@ type EsuiEvent struct {
 }
 
 type eventstoreDB interface {
-	StoreEvent(aggregateID string, aggregateName string, eventName string, data interface{}) (err error)
-	FetchAggregateEvents(aggregateID string, aggregateName string, fromID string) (events []EsuiEvent, err error)
+	StoreEvent(ctx context.Context, aggregateID string, aggregateName string, eventName string, data interface{}) (err error)
+	FetchAggregateEvents(ctx context.Context, aggregateID string, aggregateName string, fromID string) (events []EsuiEvent, err error)
 }
 
 func NewEsui(
@@ -82,12 +83,12 @@ func NewEsui(
 	return obj
 }
 
-func (es *Esui) CreateEntity(entityName string) (entityID ShortID, err error) {
+func (es *Esui) CreateEntity(ctx context.Context, entityName string) (entityID ShortID, err error) {
 	entityObj := EsuiEntityCreated{
 		Name: entityName,
 	}
 	entityID = ShortID(es.idgenerator.Generate())
-	err = es.eventstore.StoreEvent(string(entityID), "entity", "created", entityObj)
+	err = es.eventstore.StoreEvent(ctx, string(entityID), "entity", "created", entityObj)
 
 	if err != nil {
 		return "", err
@@ -95,8 +96,8 @@ func (es *Esui) CreateEntity(entityName string) (entityID ShortID, err error) {
 	return
 }
 
-func (es *Esui) GetEntity(entityID ShortID) (entity EsuiEntity, err error) {
-	events, err := es.eventstore.FetchAggregateEvents(string(entityID), "entity", "")
+func (es *Esui) GetEntity(ctx context.Context, entityID ShortID) (entity EsuiEntity, err error) {
+	events, err := es.eventstore.FetchAggregateEvents(ctx, string(entityID), "entity", "")
 	if err != nil {
 		return
 	}
@@ -154,8 +155,8 @@ func (entity *EsuiEntity) AttributeAdded(event EsuiEvent) {
 	entity.Events[attributeAdded.EventName].Attributes[attributeAdded.Name] = attributeAdded.Type
 }
 
-func (es *Esui) AddEventToEntity(entityID ShortID, eventName string) (err error) {
-	entity, err := es.GetEntity(entityID)
+func (es *Esui) AddEventToEntity(ctx context.Context, entityID ShortID, eventName string) (err error) {
+	entity, err := es.GetEntity(ctx, entityID)
 	if err != nil {
 		logger.Println(err)
 		return
@@ -174,13 +175,13 @@ func (es *Esui) AddEventToEntity(entityID ShortID, eventName string) (err error)
 	dataEvent := EsuiEventAdded{
 		Name: eventName,
 	}
-	err = es.eventstore.StoreEvent(string(entityID), "entity", "event_added", dataEvent)
+	err = es.eventstore.StoreEvent(ctx, string(entityID), "entity", "event_added", dataEvent)
 
 	return
 }
 
-func (es *Esui) AddAttribute(entityID ShortID, eventName string, attributeName AttributeName, attributeType AttributeType) (err error) {
-	err = es.eventstore.StoreEvent(string(entityID), "entity", "attribute_added", EsuiAttributeAdded{
+func (es *Esui) AddAttribute(ctx context.Context, entityID ShortID, eventName string, attributeName AttributeName, attributeType AttributeType) (err error) {
+	err = es.eventstore.StoreEvent(ctx, string(entityID), "entity", "attribute_added", EsuiAttributeAdded{
 		EventName: eventName,
 		Name:      attributeName,
 		Type:      attributeType,
@@ -193,12 +194,12 @@ type EsuiProjectionCreated struct {
 	Name string `json:"name"`
 }
 
-func (es *Esui) CreateProjection(projectionName string) (projectionID ShortID, err error) {
+func (es *Esui) CreateProjection(ctx context.Context, projectionName string) (projectionID ShortID, err error) {
 	projectionObj := EsuiProjectionCreated{
 		Name: projectionName,
 	}
 	projectionID = ShortID(es.idgenerator.Generate())
-	err = es.eventstore.StoreEvent(string(projectionID), "projection", "created", projectionObj)
+	err = es.eventstore.StoreEvent(ctx, string(projectionID), "projection", "created", projectionObj)
 
 	if err != nil {
 		return "", err
@@ -206,10 +207,10 @@ func (es *Esui) CreateProjection(projectionName string) (projectionID ShortID, e
 	return
 }
 
-func (es *Esui) GetProjection(projectionID ShortID) (projection EsuiProjection, err error) {
-	events, err := es.eventstore.FetchAggregateEvents(string(projectionID), "projection", "")
+func (es *Esui) GetProjection(ctx context.Context, projectionID ShortID) (projection EsuiProjection, err error) {
+	events, err := es.eventstore.FetchAggregateEvents(ctx, string(projectionID), "projection", "")
 	if err != nil {
-		log.Println(err)
+		logger.Println(err)
 		return
 	}
 
