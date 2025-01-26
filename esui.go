@@ -186,3 +186,20 @@ func (es *Esui) AddAttribute(entityID ShortID, eventName string, attributeName A
 
 	return
 }
+
+type EsuiProjectionCreated struct {
+	Name string `json:"name"`
+}
+
+func (es *Esui) CreateProjection(projectionName string) (projectionID ShortID, err error) {
+	projectionObj := EsuiProjectionCreated{
+		Name: projectionName,
+	}
+	projectionID = ShortID(es.idgenerator.Generate())
+	err = es.eventstore.StoreEvent(string(projectionID), "projection", "created", projectionObj)
+
+	if err != nil {
+		return "", err
+	}
+	return
+}
