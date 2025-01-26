@@ -3,6 +3,7 @@ package esui
 import (
 	"encoding/json"
 	"errors"
+	"log"
 
 	"github.com/ariefsam/esui/logger"
 )
@@ -53,7 +54,8 @@ type EsuiAttributeAdded struct {
 }
 
 type EsuiProjection struct {
-	Name string `json:"name"`
+	ID   ShortID `json:"projection_id"`
+	Name string  `json:"name"`
 }
 
 type EsuiEvent struct {
@@ -202,4 +204,32 @@ func (es *Esui) CreateProjection(projectionName string) (projectionID ShortID, e
 		return "", err
 	}
 	return
+}
+
+func (es *Esui) GetProjection(projectionID ShortID) (projection EsuiProjection, err error) {
+	events, err := es.eventstore.FetchAggregateEvents(string(projectionID), "projection", "")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	proj := EsuiProjection{}
+	for _, event := range events {
+		switch event.EventName {
+		case "created":
+			proj.HandleCreated(event, projectionID)
+		}
+	}
+	projection = proj
+	return
+}
+
+func (projection *EsuiProjection) HandleCreated(event EsuiEvent, projectionID ShortID) {
+	var projectionCreated EsuiProjectionCreated
+	err := json.Unmarshal([]byte(event.Data), &projectionCreated)
+	if err != nil {
+		return
+	}
+	projection.ID = projectionID
+	projection.Name = projectionCreated.Name
 }
