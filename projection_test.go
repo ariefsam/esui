@@ -49,3 +49,43 @@ func TestGetProjection(t *testing.T) {
 	assert.EqualValues(t, projection.Name, "projection1")
 	assert.EqualValues(t, projection.ID, "proj1")
 }
+
+func TestCreateTable(t *testing.T) {
+	ctx := context.TODO()
+	estore := &mockEventstore{}
+	idgenerator := &mockIDGenerator{}
+	es := esui.NewEsui(estore, idgenerator)
+
+	t.Run("Create Table Unknown Projection", func(t *testing.T) {
+		estore.On("FetchAggregateEvents", "proj11", "projection", "").Return([]esui.EsuiEvent{}, nil)
+
+		err := es.CreateTable(ctx, "proj11", "table1")
+		assert.Error(t, err)
+		assert.EqualValues(t, "projection not found", err.Error())
+	})
+
+	t.Run("Create Table Success", func(t *testing.T) {
+
+		estore.On("FetchAggregateEvents", "proj1", "projection", "").Return([]esui.EsuiEvent{
+			{
+				EventID:       "1",
+				AggregateID:   "proj1",
+				AggregateName: "projection",
+				EventName:     "created",
+				Data:          `{"name":"projection1"}`,
+			},
+		}, nil)
+
+		estore.On("StoreEvent", "proj1", "projection", "table_created", esui.EsuiTableCreated{
+			Name: "table1",
+		}).Return(nil).Once()
+
+		err := es.CreateTable(ctx, "proj1", "table1")
+		assert.NoError(t, err)
+
+		estore.AssertCalled(t, "StoreEvent", "proj1", "projection", "table_created", esui.EsuiTableCreated{
+			Name: "table1",
+		})
+	})
+
+}

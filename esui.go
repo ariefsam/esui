@@ -234,3 +234,26 @@ func (projection *EsuiProjection) HandleCreated(event EsuiEvent, projectionID Sh
 	projection.ID = projectionID
 	projection.Name = projectionCreated.Name
 }
+
+type EsuiTableCreated struct {
+	Name string `json:"name"`
+}
+
+func (es *Esui) CreateTable(ctx context.Context, projectionID ShortID, tableName string) (err error) {
+
+	projection, err := es.GetProjection(ctx, projectionID)
+	if err != nil {
+		return
+	}
+
+	if projection.Name == "" {
+		err = errors.New("projection not found")
+		return
+	}
+
+	err = es.eventstore.StoreEvent(ctx, string(projectionID), "projection", "table_created", EsuiTableCreated{
+		Name: tableName,
+	})
+
+	return
+}
