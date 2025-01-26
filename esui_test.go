@@ -120,7 +120,7 @@ func TestAddEventToEntity(t *testing.T) {
 
 	t.Run("Cannot Add Event if Entity Not Found", func(t *testing.T) {
 		estore.On("FetchAggregateEvents", "notfoundIDxxx", "entity", "").Return([]esui.EsuiEvent{}, nil).Once()
-		err := esObj.AddEventToEntity("notfoundIDxxx", "event_created")
+		err := esObj.AddEventToEntity("notfoundIDxxx", "event_added")
 		require.Error(t, err)
 	})
 
@@ -138,18 +138,18 @@ func TestAddEventToEntity(t *testing.T) {
 				},
 			}, nil).Once()
 
-		estore.On("StoreEvent", "abc123", "entity", "event_created", esui.EsuiEventAdded{
-			Name: "event_created",
+		estore.On("StoreEvent", "abc123", "entity", "event_added", esui.EsuiEventAdded{
+			Name: "user_created",
 		}).Return(nil).Once()
-		err := esObj.AddEventToEntity("abc123", "event_created")
+		err := esObj.AddEventToEntity("abc123", "user_created")
 		require.NoError(t, err)
 
-		estore.AssertCalled(t, "StoreEvent", "abc123", "entity", "event_created", mock.MatchedBy(func(data interface{}) bool {
+		estore.AssertCalled(t, "StoreEvent", "abc123", "entity", "event_added", mock.MatchedBy(func(data interface{}) bool {
 			dataEvent, ok := data.(esui.EsuiEventAdded)
 			if !ok {
 				return false
 			}
-			return dataEvent.Name == "event_created"
+			return dataEvent.Name == "user_created"
 		}))
 	})
 
@@ -167,7 +167,7 @@ func TestAddEventToEntity(t *testing.T) {
 					EventID:       "abc124",
 					AggregateID:   "abc123",
 					AggregateName: "entity",
-					EventName:     "event_created",
+					EventName:     "event_added",
 					Data:          `{"name":"product_created"}`,
 				},
 			}, nil).Once()
@@ -190,13 +190,99 @@ func TestAddEventToEntity(t *testing.T) {
 				EventID:       "abc124",
 				AggregateID:   "prod123",
 				AggregateName: "entity",
-				EventName:     "event_created",
+				EventName:     "event_added",
 				Data:          `{"name":"product_created"}`,
 			},
 		}, nil).Once()
 
 		err := esObj.AddEventToEntity("prod123", "product_created")
 		require.Error(t, err)
+	})
+
+}
+
+func TestAddAttribute(t *testing.T) {
+	estore := &mockEventstore{}
+	idgenerator := &mockIDGenerator{}
+	esObj := esui.NewEsui(estore, idgenerator)
+	require.NotNil(t, esObj)
+
+	// aggregate: product
+	// entity: prod123
+	// event: product_created
+	// attribute: name string
+	t.Run("Add Attribute Success", func(t *testing.T) {
+		estore.On("FetchAggregateEvents", "prod123", "entity", "").Return([]esui.EsuiEvent{
+			{
+				EventID:       "abc123",
+				AggregateID:   "prod123",
+				AggregateName: "entity",
+				EventName:     "created",
+				Data:          `{"name":"product"}`,
+			},
+			{
+				EventID:       "abc124",
+				AggregateID:   "prod123",
+				AggregateName: "entity",
+				EventName:     "event_added",
+				Data:          `{"name":"product_created"}`,
+			},
+		}, nil).Once()
+
+		estore.On("StoreEvent", "prod123", "entity", "attribute_added", esui.EsuiAttributeAdded{
+			EventName: "product_created",
+			Name:      "name",
+			Type:      "string",
+		}).Return(nil).Once()
+
+		err := esObj.AddAttribute("prod123", "product_created", "name", "string")
+		require.NoError(t, err)
+
+		estore.AssertCalled(t, "StoreEvent", "prod123", "entity", "attribute_added", mock.MatchedBy(func(data interface{}) bool {
+			dataEvent, ok := data.(esui.EsuiAttributeAdded)
+			if !ok {
+				return false
+			}
+			return dataEvent.Name == "name" && dataEvent.Type == "string" && dataEvent.EventName == "product_created"
+		}))
+	})
+
+	t.Run("Get entity will show attribute", func(t *testing.T) {
+		estore.On("FetchAggregateEvents", "prod123", "entity", "").Return([]esui.EsuiEvent{
+			{
+				EventID:       "abc123",
+				AggregateID:   "prod123",
+				AggregateName: "entity",
+				EventName:     "created",
+				Data:          `{"name":"product"}`,
+			},
+			{
+				EventID:       "abc124",
+				AggregateID:   "prod123",
+				AggregateName: "entity",
+				EventName:     "event_added",
+				Data:          `{"name":"product_created"}`,
+			},
+			{
+				EventID:       "abc125",
+				AggregateID:   "prod123",
+				AggregateName: "entity",
+				EventName:     "attribute_added",
+				Data:          `{"event_name":"product_created","name":"name","type":"string"}`,
+			},
+			{
+				EventID:       "abc126",
+				AggregateID:   "prod123",
+				AggregateName: "entity",
+				EventName:     "attribute_added",
+				Data:          `{"event_name":"product_created","name":"price","type":"float"}`,
+			},
+		}, nil).Once()
+		esuiEntity, err := esObj.GetEntity("prod123")
+		require.NoError(t, err)
+		require.Equal(t, "product", esuiEntity.Name)
+		require.Equal(t, esui.AttributeType("string"), esuiEntity.Events["product_created"].Attributes["name"])
+		require.Equal(t, esui.AttributeType("float"), esuiEntity.Events["product_created"].Attributes["price"])
 	})
 
 }
