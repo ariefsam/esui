@@ -91,6 +91,7 @@ func (es *Esui) CreateEntity(ctx context.Context, entityName string) (entityID S
 	err = es.eventstore.StoreEvent(ctx, string(entityID), "entity", "created", entityObj)
 
 	if err != nil {
+		logger.Println(err)
 		return "", err
 	}
 	return
@@ -99,6 +100,7 @@ func (es *Esui) CreateEntity(ctx context.Context, entityName string) (entityID S
 func (es *Esui) GetEntity(ctx context.Context, entityID ShortID) (entity EsuiEntity, err error) {
 	events, err := es.eventstore.FetchAggregateEvents(ctx, string(entityID), "entity", "")
 	if err != nil {
+		logger.Println(err)
 		return
 	}
 
@@ -120,6 +122,7 @@ func (entity *EsuiEntity) Created(event EsuiEvent, entityID ShortID) {
 	var entityCreated EsuiEntityCreated
 	err := json.Unmarshal([]byte(event.Data), &entityCreated)
 	if err != nil {
+		logger.Println(err)
 		return
 	}
 	entity.ID = entityID
@@ -130,6 +133,7 @@ func (entity *EsuiEntity) EventAdded(event EsuiEvent) {
 	var eventAdded EsuiEventAdded
 	err := json.Unmarshal([]byte(event.Data), &eventAdded)
 	if err != nil {
+		logger.Println(err)
 		return
 	}
 	if entity.Events == nil {
@@ -142,6 +146,7 @@ func (entity *EsuiEntity) AttributeAdded(event EsuiEvent) {
 	var attributeAdded EsuiAttributeAdded
 	err := json.Unmarshal([]byte(event.Data), &attributeAdded)
 	if err != nil {
+		logger.Println(err)
 		return
 	}
 	if entity.Events == nil {
@@ -164,11 +169,13 @@ func (es *Esui) AddEventToEntity(ctx context.Context, entityID ShortID, eventNam
 
 	if entity.Name == "" {
 		err = errors.New("entity not found")
+		logger.Println(err)
 		return
 	}
 
 	if _, ok := entity.Events[eventName]; ok {
 		err = errors.New("event already exist")
+		logger.Println(err)
 		return
 	}
 
@@ -202,6 +209,7 @@ func (es *Esui) CreateProjection(ctx context.Context, projectionName string) (pr
 	err = es.eventstore.StoreEvent(ctx, string(projectionID), "projection", "created", projectionObj)
 
 	if err != nil {
+		logger.Println(err)
 		return "", err
 	}
 	return
@@ -229,6 +237,7 @@ func (projection *EsuiProjection) HandleCreated(event EsuiEvent, projectionID Sh
 	var projectionCreated EsuiProjectionCreated
 	err := json.Unmarshal([]byte(event.Data), &projectionCreated)
 	if err != nil {
+		logger.Println(err)
 		return
 	}
 	projection.ID = projectionID
@@ -243,11 +252,13 @@ func (es *Esui) CreateTable(ctx context.Context, projectionID ShortID, tableName
 
 	projection, err := es.GetProjection(ctx, projectionID)
 	if err != nil {
+		logger.Println(err)
 		return
 	}
 
 	if projection.Name == "" {
 		err = errors.New("projection not found")
+		logger.Println(err)
 		return
 	}
 
