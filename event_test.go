@@ -22,12 +22,12 @@ func (m *mockEventstore) StoreEvent(ctx context.Context, aggregateID string, agg
 	return args.Error(0)
 }
 
-func (m *mockEventstore) FetchAggregateEvents(ctx context.Context, aggregateID string, aggregateName string, fromID string) (events []esui.EsuiEvent, err error) {
+func (m *mockEventstore) FetchAggregateEvents(ctx context.Context, aggregateID string, aggregateName string, fromID string) (events []esui.EstoreEvent, err error) {
 	args := m.Called(aggregateID, aggregateName, fromID)
 	if len(args) == 0 {
-		return []esui.EsuiEvent{}, nil
+		return []esui.EstoreEvent{}, nil
 	}
-	events, _ = args.Get(0).([]esui.EsuiEvent)
+	events, _ = args.Get(0).([]esui.EstoreEvent)
 	err = args.Error(1)
 	return
 }
@@ -93,7 +93,7 @@ func TestGetEntity(t *testing.T) {
 	t.Run("Get Entity Success", func(t *testing.T) {
 
 		estore.On("FetchAggregateEvents", "abc123", "entity", "").Return(
-			[]esui.EsuiEvent{
+			[]esui.EstoreEvent{
 				{
 					EventID:       "abc123",
 					AggregateID:   "abc123",
@@ -123,7 +123,7 @@ func TestAddEventToEntity(t *testing.T) {
 	require.NotNil(t, esObj)
 
 	t.Run("Cannot Add Event if Entity Not Found", func(t *testing.T) {
-		estore.On("FetchAggregateEvents", "notfoundIDxxx", "entity", "").Return([]esui.EsuiEvent{}, nil).Once()
+		estore.On("FetchAggregateEvents", "notfoundIDxxx", "entity", "").Return([]esui.EstoreEvent{}, nil).Once()
 		err := esObj.AddEventToEntity(ctx, "notfoundIDxxx", "event_added")
 		require.Error(t, err)
 	})
@@ -132,7 +132,7 @@ func TestAddEventToEntity(t *testing.T) {
 		idgenerator.On("Generate").Return("abc123").Once()
 
 		estore.On("FetchAggregateEvents", "abc123", "entity", "").Return(
-			[]esui.EsuiEvent{
+			[]esui.EstoreEvent{
 				{
 					EventID:       "abc123",
 					AggregateID:   "abc123",
@@ -159,7 +159,7 @@ func TestAddEventToEntity(t *testing.T) {
 
 	t.Run("Get entity will show event", func(t *testing.T) {
 		estore.On("FetchAggregateEvents", "abc123", "entity", "").Return(
-			[]esui.EsuiEvent{
+			[]esui.EstoreEvent{
 				{
 					EventID:       "abc123",
 					AggregateID:   "abc123",
@@ -182,7 +182,7 @@ func TestAddEventToEntity(t *testing.T) {
 	})
 
 	t.Run("Failed to create already exist event on entity product", func(t *testing.T) {
-		estore.On("FetchAggregateEvents", "prod123", "entity", "").Return([]esui.EsuiEvent{
+		estore.On("FetchAggregateEvents", "prod123", "entity", "").Return([]esui.EstoreEvent{
 			{
 				EventID:       "abc123",
 				AggregateID:   "prod123",
@@ -217,7 +217,7 @@ func TestAddAttribute(t *testing.T) {
 	// event: product_created
 	// attribute: name string
 	t.Run("Add Attribute Success", func(t *testing.T) {
-		estore.On("FetchAggregateEvents", "prod123", "entity", "").Return([]esui.EsuiEvent{
+		estore.On("FetchAggregateEvents", "prod123", "entity", "").Return([]esui.EstoreEvent{
 			{
 				EventID:       "abc123",
 				AggregateID:   "prod123",
@@ -253,7 +253,7 @@ func TestAddAttribute(t *testing.T) {
 	})
 
 	t.Run("Get entity will show attribute", func(t *testing.T) {
-		estore.On("FetchAggregateEvents", "prod1234", "entity", "").Return([]esui.EsuiEvent{
+		estore.On("FetchAggregateEvents", "prod1234", "entity", "").Return([]esui.EstoreEvent{
 			{
 				EventID:       "abc123",
 				AggregateID:   "prod1234",
