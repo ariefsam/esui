@@ -386,3 +386,32 @@ func (es *Esui) AddColumn(ctx context.Context, projectionID ShortID,
 
 	return
 }
+
+type Block struct {
+	BlockID      string    `json:"block_id"`
+	Name         string    `json:"name"`
+	Type         string    `json:"type"`
+	OrderedAfter string    `json:"ordered_after"`
+	Data         BlockData `json:"data"`
+}
+
+type BlockData struct {
+	Javascript *string `json:"javascript"`
+}
+
+func (es *Esui) AddBlock(ctx context.Context, projectionID ShortID, data Block) (err error) {
+	projection, err := es.GetProjection(ctx, projectionID)
+	if err != nil {
+		logger.Println(ctx, err)
+		return
+	}
+	if projection.Name == "" {
+		err = errors.New("projection not found")
+		logger.Println(ctx, err)
+		return
+	}
+
+	err = es.eventstore.StoreEvent(ctx, string(projectionID), "projection", "block_added", data)
+
+	return
+}

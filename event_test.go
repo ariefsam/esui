@@ -3,6 +3,7 @@ package esui_test
 import (
 	"context"
 	"errors"
+	"log"
 	"testing"
 
 	"github.com/ariefsam/esui"
@@ -212,10 +213,6 @@ func TestAddAttribute(t *testing.T) {
 	esObj := esui.NewEsui(estore, idgenerator)
 	require.NotNil(t, esObj)
 
-	// aggregate: product
-	// entity: prod123
-	// event: product_created
-	// attribute: name string
 	t.Run("Add Attribute Success", func(t *testing.T) {
 		estore.On("FetchAggregateEvents", "prod123", "entity", "").Return([]esui.EstoreEvent{
 			{
@@ -290,4 +287,9 @@ func TestAddAttribute(t *testing.T) {
 		require.Equal(t, esui.AttributeType("float"), esuiEntity.Events["product_created"].Attributes["price"])
 	})
 
+}
+
+func TestProjectionApplication(t *testing.T) {
+	currentApp := esui.Application{}
+	log.Println(currentApp)
 }

@@ -218,3 +218,35 @@ func TestAddColumn(t *testing.T) {
 	})
 
 }
+
+func TestAddBlockJavascriptToProjection(t *testing.T) {
+	ctx := context.TODO()
+	estore := &mockEventstore{}
+	idgenerator := &mockIDGenerator{}
+	es := esui.NewEsui(estore, idgenerator)
+
+	data := esui.Block{
+		BlockID:      "blockxxx",
+		Name:         "script 1",
+		Type:         "javascript",
+		OrderedAfter: "",
+	}
+
+	estore.On("FetchAggregateEvents", "proj1", "projection", "").Return([]esui.EstoreEvent{
+		{
+			EventID:       "1",
+			AggregateID:   "proj1",
+			AggregateName: "projection",
+			EventName:     "created",
+			Data:          `{"name":"projection1"}`,
+		},
+	}, nil).Once()
+
+	estore.On("StoreEvent", "proj1", "projection", "block_added", data).Return(nil).Once()
+
+	err := es.AddBlock(ctx, "proj1", data)
+	assert.NoError(t, err)
+
+	estore.AssertCalled(t, "StoreEvent", "proj1", "projection", "block_added", data)
+
+}
